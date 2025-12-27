@@ -19,9 +19,15 @@ import java.util.Locale;
 public class BillAdapter extends RecyclerView.Adapter<BillAdapter.ViewHolder> {
 
     private List<Bill> bills;
+    private OnBillClickListener clickListener;
 
-    public BillAdapter(List<Bill> bills) {
+    public interface OnBillClickListener {
+        void onBillClick(Bill bill);
+    }
+
+    public BillAdapter(List<Bill> bills, OnBillClickListener clickListener) {
         this.bills = bills;
+        this.clickListener = clickListener;
     }
 
     @NonNull
@@ -40,6 +46,12 @@ public class BillAdapter extends RecyclerView.Adapter<BillAdapter.ViewHolder> {
         holder.totalText.setText("Total: ₹" + String.format("%.2f", bill.total));
         holder.dateText.setText(formatDate(bill.timestamp));
         holder.itemCountText.setText("Items: " + bill.items.size());
+
+        holder.itemView.setOnClickListener(v -> {
+            if (clickListener != null) {
+                clickListener.onBillClick(bill);
+            }
+        });
     }
 
     private String formatDate(long timestamp) {

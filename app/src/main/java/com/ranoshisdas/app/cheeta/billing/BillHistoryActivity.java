@@ -1,5 +1,6 @@
 package com.ranoshisdas.app.cheeta.billing;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ProgressBar;
@@ -14,6 +15,7 @@ import com.ranoshisdas.app.cheeta.R;
 import com.ranoshisdas.app.cheeta.models.Bill;
 import com.ranoshisdas.app.cheeta.utils.FirebaseUtil;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,9 +43,15 @@ public class BillHistoryActivity extends AppCompatActivity {
 
     private void setupRecyclerView() {
         billList = new ArrayList<>();
-        adapter = new BillAdapter(billList);
+        adapter = new BillAdapter(billList, this::openBillDetail);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
+    }
+
+    private void openBillDetail(Bill bill) {
+        Intent intent = new Intent(this, BillDetailActivity.class);
+        intent.putExtra("bill", (Serializable) bill);
+        startActivity(intent);
     }
 
     private void loadBills() {

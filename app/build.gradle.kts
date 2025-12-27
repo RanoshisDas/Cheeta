@@ -19,12 +19,21 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            isShrinkResources = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Optional: Enable R8 full mode for better optimization
+            // Add this line in gradle.properties: android.enableR8.fullMode=true
+        }
+        debug {
+            isMinifyEnabled = false
+            isShrinkResources = false
+            isDebuggable = true
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-DEBUG"
         }
     }
     compileOptions {
@@ -47,6 +56,9 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.4.0")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.13.0")
+
+    // PDF generation
+    implementation("com.itextpdf:itext7-core:7.2.5")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)

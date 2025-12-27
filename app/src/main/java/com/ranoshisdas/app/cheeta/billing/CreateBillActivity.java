@@ -1,6 +1,8 @@
 package com.ranoshisdas.app.cheeta.billing;
 
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
@@ -17,6 +19,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.ranoshisdas.app.cheeta.R;
 import com.ranoshisdas.app.cheeta.models.Bill;
+import com.ranoshisdas.app.cheeta.models.BillItem;
 import com.ranoshisdas.app.cheeta.models.Customer;
 import com.ranoshisdas.app.cheeta.models.Item;
 import com.ranoshisdas.app.cheeta.utils.FirebaseUtil;
@@ -35,7 +38,7 @@ public class CreateBillActivity extends AppCompatActivity {
     private ProgressBar progressBar;
 
     private List<Item> availableItems;
-    private List<Item> selectedItems;
+    private List<BillItem> selectedItems;
     private BillItemAdapter adapter;
     private double total = 0;
 
@@ -102,21 +105,69 @@ public class CreateBillActivity extends AppCompatActivity {
                 .setTitle("Select Item")
                 .setItems(itemNames, (dialog, which) -> {
                     Item selected = availableItems.get(which);
-                    addItemToBill(selected);
+                    showQuantityDialog(selected);
                 })
                 .show();
     }
 
-    private void addItemToBill(Item item) {
-        selectedItems.add(item);
-        total += item.price;
+    private void showQuantityDialog(Item item) {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_select_item_quantity, null);
+        TextView itemNameText = dialogView.findViewById(R.id.itemNameText);
+        TextView itemPriceText = dialogView.findViewById(R.id.itemPriceText);
+        EditText quantityInput = dialogView.findViewById(R.id.quantityInput);
+        TextView subtotalText = dialogView.findViewById(R.id.subtotalText);
+
+        itemNameText.setText(item.name);
+        itemPriceText.setText("Price: ₹" + String.format("%.2f", item.price));
+
+        // Update subtotal as quantity changes
+        quantityInput.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (!s.toString().isEmpty()) {
+                    int qty = Integer.parseInt(s.toString());
+                    double subtotal = item.price * qty;
+                    subtotalText.setText("Subtotal: ₹" + String.format("%.2f", subtotal));
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+
+        // Initial subtotal
+        subtotalText.setText("Subtotal: ₹" + String.format("%.2f", item.price));
+
+        new AlertDialog.Builder(this)
+                .setTitle("Enter Quantity")
+                .setView(dialogView)
+                .setPositiveButton("Add", (dialog, which) -> {
+                    String qtyStr = quantityInput.getText().toString().trim();
+                    if (qtyStr.isEmpty() || Integer.parseInt(qtyStr) <= 0) {
+                        Toast.makeText(this, "Enter valid quantity", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    int quantity = Integer.parseInt(qtyStr);
+                    addItemToBill(item, quantity);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void addItemToBill(Item item, int quantity) {
+        BillItem billItem = new BillItem(item, quantity);
+        selectedItems.add(billItem);
+        total += billItem.subtotal;
         updateTotal();
         adapter.notifyDataSetChanged();
     }
 
-    private void removeItem(Item item) {
+    private void removeItem(BillItem item) {
         selectedItems.remove(item);
-        total -= item.price;
+        total -= item.subtotal;
         updateTotal();
         adapter.notifyDataSetChanged();
     }
@@ -145,14 +196,13 @@ public class CreateBillActivity extends AppCompatActivity {
 
         String userId = FirebaseUtil.auth().getCurrentUser().getUid();
 
-        // Create Customer object
         Customer customer = new Customer();
         customer.name = name;
         customer.phone = phone;
         customer.email = email;
 
         Map<String, Object> billData = new HashMap<>();
-        billData.put("customer", customer);  // Changed: now using customer object
+        billData.put("customer", customer);
         billData.put("total", total);
         billData.put("timestamp", System.currentTimeMillis());
         billData.put("items", selectedItems);

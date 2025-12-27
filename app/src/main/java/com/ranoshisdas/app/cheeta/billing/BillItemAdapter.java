@@ -10,20 +10,20 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.ranoshisdas.app.cheeta.R;
-import com.ranoshisdas.app.cheeta.models.Item;
+import com.ranoshisdas.app.cheeta.models.BillItem;
 
 import java.util.List;
 
 public class BillItemAdapter extends RecyclerView.Adapter<BillItemAdapter.ViewHolder> {
 
-    private List<Item> items;
+    private List<BillItem> items;
     private OnItemRemoveListener removeListener;
 
     public interface OnItemRemoveListener {
-        void onItemRemove(Item item);
+        void onItemRemove(BillItem item);
     }
 
-    public BillItemAdapter(List<Item> items, OnItemRemoveListener removeListener) {
+    public BillItemAdapter(List<BillItem> items, OnItemRemoveListener removeListener) {
         this.items = items;
         this.removeListener = removeListener;
     }
@@ -38,9 +38,11 @@ public class BillItemAdapter extends RecyclerView.Adapter<BillItemAdapter.ViewHo
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Item item = items.get(position);
+        BillItem item = items.get(position);
         holder.nameText.setText(item.name);
         holder.priceText.setText("₹" + String.format("%.2f", item.price));
+        holder.quantityText.setText(" × " + item.quantity);
+        holder.subtotalText.setText(" = ₹" + String.format("%.2f", item.subtotal));
         holder.removeButton.setOnClickListener(v -> removeListener.onItemRemove(item));
     }
 
@@ -50,13 +52,15 @@ public class BillItemAdapter extends RecyclerView.Adapter<BillItemAdapter.ViewHo
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView nameText, priceText;
+        TextView nameText, priceText, quantityText, subtotalText;
         ImageButton removeButton;
 
         ViewHolder(View itemView) {
             super(itemView);
             nameText = itemView.findViewById(R.id.itemNameText);
             priceText = itemView.findViewById(R.id.itemPriceText);
+            quantityText = itemView.findViewById(R.id.quantityText);
+            subtotalText = itemView.findViewById(R.id.subtotalText);
             removeButton = itemView.findViewById(R.id.removeButton);
         }
     }
