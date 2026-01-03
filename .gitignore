@@ -62,6 +62,9 @@ logcat.txt
 *.ap_
 *.dex
 captures/
+# Extra safety for build outputs
+**/*.apk
+**/*.aab
 
 # ===============================
 # Crash & profiling
