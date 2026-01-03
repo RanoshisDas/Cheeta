@@ -1,17 +1,106 @@
+# ===============================
+# Android / Gradle
+# ===============================
+.gradle/
+build/
+*/build/
+.gradle-cache/
+.cxx/
+.externalNativeBuild/
+
+# ===============================
+# Android Studio
+# ===============================
+.idea/
 *.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+*.ipr
+*.iws
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+
+# ===============================
+# Local config
+# ===============================
 local.properties
-# Firebase
+keystore.properties
+
+# ===============================
+# Signing / Keystore
+# ===============================
+*.jks
+*.keystore
+*.pem
+
+# ===============================
+# Firebase / Google Services
+# ===============================
 google-services.json
+firebase.json
+
+# ===============================
+# OS Generated Files
+# ===============================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===============================
+# Logs
+# ===============================
+*.log
+logcat.txt
+
+# ===============================
+# APK / AAB / Output
+# ===============================
+*.apk
+*.aab
+*.ap_
+*.dex
+captures/
+
+# ===============================
+# Crash & profiling
+# ===============================
+*.hprof
+*.trace
+
+# ===============================
+# Temporary / Cache
+# ===============================
+tmp/
+.cache/
+out/
+
+# ===============================
+# External storage (PDF / Bills)
+# ===============================
+**/Cheeta/Bills/
+**/Documents/Cheeta/
+
+# ===============================
+# Test reports
+# ===============================
+reports/
+test-results/
+
+# ===============================
+# Kotlin / Java
+# ===============================
+*.class
+*.jar
+
+# ===============================
+# VS Code (if used)
+# ===============================
+.vscode/
+
+# ===============================
+# Gradle Wrapper (KEEP)
+# ===============================
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties

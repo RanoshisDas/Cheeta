@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.ranoshisdas.app.cheeta.R;
+import com.ranoshisdas.app.cheeta.models.Bill;
 import com.ranoshisdas.app.cheeta.models.BillItem;
 import com.ranoshisdas.app.cheeta.models.Customer;
 import com.ranoshisdas.app.cheeta.models.Item;
@@ -230,20 +231,45 @@ public class CreateBillActivity extends AppCompatActivity {
 
         String userId = FirebaseUtil.auth().getCurrentUser().getUid();
 
+        // Create customer object
         Customer customer = new Customer();
         customer.name = name;
         customer.phone = phone;
         customer.email = email;
 
+        // Get current GST rates
+        float cgstRate = InvoiceSettings.getCGSTRate(this);
+        float sgstRate = InvoiceSettings.getSGSTRate(this);
+
+        // Create business details object (snapshot of current settings)
+        Map<String, Object> businessDetails = new HashMap<>();
+        businessDetails.put("name", InvoiceSettings.getBusinessName(this));
+        businessDetails.put("address", InvoiceSettings.getAddress(this));
+        businessDetails.put("phone", InvoiceSettings.getPhone(this));
+        businessDetails.put("email", InvoiceSettings.getEmail(this));
+        businessDetails.put("gstin", InvoiceSettings.getGSTIN(this));
+
+        // Create bill data with ALL details including GST
         Map<String, Object> billData = new HashMap<>();
         billData.put("customer", customer);
+        billData.put("items", selectedItems);
+
+        // Amount breakdown
         billData.put("subtotal", subtotal);
         billData.put("cgst", cgstAmount);
         billData.put("sgst", sgstAmount);
         billData.put("total", total);
-        billData.put("timestamp", System.currentTimeMillis());
-        billData.put("items", selectedItems);
 
+        // GST rates used (for historical accuracy)
+        billData.put("cgstRate", cgstRate);
+        billData.put("sgstRate", sgstRate);
+
+        // Business details at time of creation
+        billData.put("businessDetails", businessDetails);
+
+        billData.put("timestamp", System.currentTimeMillis());
+
+        // Save to Firestore
         FirebaseUtil.db().collection("users")
                 .document(userId)
                 .collection("bills")
@@ -255,7 +281,8 @@ public class CreateBillActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> {
                     progressBar.setVisibility(View.GONE);
                     saveBillButton.setEnabled(true);
-                    Toast.makeText(this, "Failed to save bill", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Failed to save bill: " + e.getMessage(),
+                            Toast.LENGTH_SHORT).show();
                 });
     }
 }

@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.ranoshisdas.app.cheeta.R;
 import com.ranoshisdas.app.cheeta.models.Bill;
 import com.ranoshisdas.app.cheeta.settings.InvoiceSettingsActivity;
+import com.ranoshisdas.app.cheeta.utils.BillCompatibilityHelper;
 import com.ranoshisdas.app.cheeta.utils.ImageUtils;
 import com.ranoshisdas.app.cheeta.utils.InvoiceSettings;
 import com.ranoshisdas.app.cheeta.utils.PdfUtils;
@@ -53,6 +54,11 @@ public class BillDetailActivity extends AppCompatActivity {
         displayBillDetails();
         setupRecyclerView();
         setupListeners();
+
+        // Check if legacy bill needs migration
+        if (BillCompatibilityHelper.needsMigration(bill)) {
+            showLegacyBillWarning();
+        }
     }
 
     private void initializeViews() {
@@ -93,7 +99,21 @@ public class BillDetailActivity extends AppCompatActivity {
         sharePdfButton.setOnClickListener(v -> shareAsPdf());
     }
 
+    private void showLegacyBillWarning() {
+        new AlertDialog.Builder(this)
+                .setTitle("Legacy Bill")
+                .setMessage("This bill was created before business details were stored. Current settings will be used for PDF/Image generation.")
+                .setPositiveButton("OK", null)
+                .show();
+    }
+
     private void shareAsImage() {
+        // Ensure bill compatibility
+        if (!BillCompatibilityHelper.ensureBillCompatibility(this, bill)) {
+            showSettingsRequiredDialog();
+            return;
+        }
+
         progressBar.setVisibility(View.VISIBLE);
         shareImageButton.setEnabled(false);
 
@@ -117,16 +137,9 @@ public class BillDetailActivity extends AppCompatActivity {
     }
 
     private void shareAsPdf() {
-        // NEW: Check if settings are configured
-        if (!InvoiceSettings.hasMinimumSettings(this)) {
-            new AlertDialog.Builder(this)
-                    .setTitle("Settings Required")
-                    .setMessage("Please configure your invoice settings before generating PDF.")
-                    .setPositiveButton("Configure", (dialog, which) -> {
-                        startActivity(new Intent(this, InvoiceSettingsActivity.class));
-                    })
-                    .setNegativeButton("Cancel", null)
-                    .show();
+        // Ensure bill compatibility
+        if (!BillCompatibilityHelper.ensureBillCompatibility(this, bill)) {
+            showSettingsRequiredDialog();
             return;
         }
 
@@ -150,5 +163,16 @@ public class BillDetailActivity extends AppCompatActivity {
                 });
             }
         }).start();
+    }
+
+    private void showSettingsRequiredDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Settings Required")
+                .setMessage("Please configure your invoice settings to generate PDF/Image.")
+                .setPositiveButton("Configure", (dialog, which) -> {
+                    startActivity(new Intent(this, InvoiceSettingsActivity.class));
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 }
