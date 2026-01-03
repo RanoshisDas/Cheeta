@@ -14,11 +14,13 @@ import com.ranoshisdas.app.cheeta.auth.LoginActivity;
 import com.ranoshisdas.app.cheeta.billing.BillHistoryActivity;
 import com.ranoshisdas.app.cheeta.billing.CreateBillActivity;
 import com.ranoshisdas.app.cheeta.inventory.InventoryActivity;
+import com.ranoshisdas.app.cheeta.settings.InvoiceSettingsActivity;
 import com.ranoshisdas.app.cheeta.utils.FirebaseUtil;
+import com.ranoshisdas.app.cheeta.utils.InvoiceSettings;
 
 public class DashboardActivity extends AppCompatActivity {
 
-    private MaterialCardView createBillCard, inventoryCard, billHistoryCard;
+    private MaterialCardView createBillCard, inventoryCard, billHistoryCard, settingsCard;
     private Button logoutButton;
     private TextView welcomeText;
 
@@ -30,12 +32,14 @@ public class DashboardActivity extends AppCompatActivity {
         initializeViews();
         setupListeners();
         displayUserInfo();
+        checkFirstRun();
     }
 
     private void initializeViews() {
         createBillCard = findViewById(R.id.createBillCard);
         inventoryCard = findViewById(R.id.inventoryCard);
         billHistoryCard = findViewById(R.id.billHistoryCard);
+        settingsCard = findViewById(R.id.settingsCard); // NEW
         logoutButton = findViewById(R.id.logoutButton);
         welcomeText = findViewById(R.id.welcomeText);
     }
@@ -50,12 +54,31 @@ public class DashboardActivity extends AppCompatActivity {
         billHistoryCard.setOnClickListener(v ->
                 startActivity(new Intent(this, BillHistoryActivity.class)));
 
+        // NEW: Settings card
+        settingsCard.setOnClickListener(v ->
+                startActivity(new Intent(this, InvoiceSettingsActivity.class)));
+
         logoutButton.setOnClickListener(v -> showLogoutDialog());
     }
 
     private void displayUserInfo() {
         String email = FirebaseUtil.auth().getCurrentUser().getEmail();
         welcomeText.setText("Welcome, " + email);
+    }
+
+    // NEW: Check if settings are configured on first run
+    private void checkFirstRun() {
+        if (!InvoiceSettings.isSettingsCompleted(this)) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Setup Required")
+                    .setMessage("Please configure your invoice settings before creating bills.")
+                    .setPositiveButton("Configure Now", (dialog, which) -> {
+                        startActivity(new Intent(this, InvoiceSettingsActivity.class));
+                    })
+                    .setNegativeButton("Later", null)
+                    .setCancelable(false)
+                    .show();
+        }
     }
 
     private void showLogoutDialog() {

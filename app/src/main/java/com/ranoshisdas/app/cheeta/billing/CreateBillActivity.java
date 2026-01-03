@@ -1,5 +1,6 @@
 package com.ranoshisdas.app.cheeta.billing;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -18,11 +19,12 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.ranoshisdas.app.cheeta.R;
-import com.ranoshisdas.app.cheeta.models.Bill;
 import com.ranoshisdas.app.cheeta.models.BillItem;
 import com.ranoshisdas.app.cheeta.models.Customer;
 import com.ranoshisdas.app.cheeta.models.Item;
+import com.ranoshisdas.app.cheeta.settings.InvoiceSettingsActivity;
 import com.ranoshisdas.app.cheeta.utils.FirebaseUtil;
+import com.ranoshisdas.app.cheeta.utils.InvoiceSettings;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,12 +36,16 @@ public class CreateBillActivity extends AppCompatActivity {
     private EditText customerNameInput, customerPhoneInput, customerEmailInput;
     private RecyclerView selectedItemsRecycler;
     private Button addItemButton, saveBillButton;
-    private TextView totalText;
+    private TextView subtotalText, cgstText, sgstText, totalText;
     private ProgressBar progressBar;
 
     private List<Item> availableItems;
     private List<BillItem> selectedItems;
     private BillItemAdapter adapter;
+
+    private double subtotal = 0;
+    private double cgstAmount = 0;
+    private double sgstAmount = 0;
     private double total = 0;
 
     @Override
@@ -50,6 +56,7 @@ public class CreateBillActivity extends AppCompatActivity {
         initializeViews();
         setupRecyclerView();
         loadAvailableItems();
+        checkSettings();
 
         addItemButton.setOnClickListener(v -> showItemSelectionDialog());
         saveBillButton.setOnClickListener(v -> saveBill());
@@ -62,6 +69,9 @@ public class CreateBillActivity extends AppCompatActivity {
         selectedItemsRecycler = findViewById(R.id.selectedItemsRecycler);
         addItemButton = findViewById(R.id.addItemButton);
         saveBillButton = findViewById(R.id.saveBillButton);
+        subtotalText = findViewById(R.id.subtotalText);
+        cgstText = findViewById(R.id.cgstText);
+        sgstText = findViewById(R.id.sgstText);
         totalText = findViewById(R.id.totalText);
         progressBar = findViewById(R.id.progressBar);
     }
@@ -88,6 +98,19 @@ public class CreateBillActivity extends AppCompatActivity {
                         availableItems.add(item);
                     }
                 });
+    }
+
+    private void checkSettings() {
+        if (!InvoiceSettings.hasMinimumSettings(this)) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Invoice Settings")
+                    .setMessage("Invoice settings are not configured. Configure now for proper invoices with GST.")
+                    .setPositiveButton("Configure", (dialog, which) -> {
+                        startActivity(new Intent(this, InvoiceSettingsActivity.class));
+                    })
+                    .setNegativeButton("Later", null)
+                    .show();
+        }
     }
 
     private void showItemSelectionDialog() {
@@ -120,7 +143,6 @@ public class CreateBillActivity extends AppCompatActivity {
         itemNameText.setText(item.name);
         itemPriceText.setText("Price: ₹" + String.format("%.2f", item.price));
 
-        // Update subtotal as quantity changes
         quantityInput.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -138,7 +160,6 @@ public class CreateBillActivity extends AppCompatActivity {
             public void afterTextChanged(Editable s) {}
         });
 
-        // Initial subtotal
         subtotalText.setText("Subtotal: ₹" + String.format("%.2f", item.price));
 
         new AlertDialog.Builder(this)
@@ -160,19 +181,32 @@ public class CreateBillActivity extends AppCompatActivity {
     private void addItemToBill(Item item, int quantity) {
         BillItem billItem = new BillItem(item, quantity);
         selectedItems.add(billItem);
-        total += billItem.subtotal;
-        updateTotal();
+        subtotal += billItem.subtotal;
+        updateTotals();
         adapter.notifyDataSetChanged();
     }
 
     private void removeItem(BillItem item) {
         selectedItems.remove(item);
-        total -= item.subtotal;
-        updateTotal();
+        subtotal -= item.subtotal;
+        updateTotals();
         adapter.notifyDataSetChanged();
     }
 
-    private void updateTotal() {
+    private void updateTotals() {
+        // Get GST rates from settings
+        float cgstRate = InvoiceSettings.getCGSTRate(this);
+        float sgstRate = InvoiceSettings.getSGSTRate(this);
+
+        // Calculate GST amounts
+        cgstAmount = (subtotal * cgstRate) / 100;
+        sgstAmount = (subtotal * sgstRate) / 100;
+        total = subtotal + cgstAmount + sgstAmount;
+
+        // Update UI
+        subtotalText.setText("Subtotal: ₹" + String.format("%.2f", subtotal));
+        cgstText.setText("CGST (" + String.format("%.1f", cgstRate) + "%): ₹" + String.format("%.2f", cgstAmount));
+        sgstText.setText("SGST (" + String.format("%.1f", sgstRate) + "%): ₹" + String.format("%.2f", sgstAmount));
         totalText.setText("Total: ₹" + String.format("%.2f", total));
     }
 
@@ -203,6 +237,9 @@ public class CreateBillActivity extends AppCompatActivity {
 
         Map<String, Object> billData = new HashMap<>();
         billData.put("customer", customer);
+        billData.put("subtotal", subtotal);
+        billData.put("cgst", cgstAmount);
+        billData.put("sgst", sgstAmount);
         billData.put("total", total);
         billData.put("timestamp", System.currentTimeMillis());
         billData.put("items", selectedItems);

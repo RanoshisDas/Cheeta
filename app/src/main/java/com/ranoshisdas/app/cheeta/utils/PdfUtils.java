@@ -24,6 +24,11 @@ public class PdfUtils {
 
     public static File generateBillPdf(Context context, Bill bill) throws IOException {
 
+        // Check if settings are configured
+        if (!InvoiceSettings.hasMinimumSettings(context)) {
+            throw new IOException("Invoice settings not configured. Please set up business details first.");
+        }
+
         PdfDocument document = new PdfDocument();
         PdfDocument.PageInfo pageInfo =
                 new PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, 1).create();
@@ -39,14 +44,38 @@ public class PdfUtils {
            ========================= */
         paint.setTextSize(16);
         paint.setFakeBoldText(true);
-        canvas.drawText("New Priti Press", MARGIN, y, paint);
+        canvas.drawText(InvoiceSettings.getBusinessName(context), MARGIN, y, paint);
 
         paint.setTextSize(11);
         paint.setFakeBoldText(false);
-        y += 18;
-        canvas.drawText("Prop: Pronay Kumar Sikder", MARGIN, y, paint);
-        y += 14;
-        canvas.drawText("GSTIN: 19CNHPS3979J1Z1", MARGIN, y, paint);
+
+        // Address (if available)
+        String address = InvoiceSettings.getAddress(context);
+        if (!address.isEmpty()) {
+            y += 18;
+            canvas.drawText(address, MARGIN, y, paint);
+        }
+
+        // Phone
+        String phone = InvoiceSettings.getPhone(context);
+        if (!phone.isEmpty()) {
+            y += 14;
+            canvas.drawText("Phone: " + phone, MARGIN, y, paint);
+        }
+
+        // Email (if available)
+        String email = InvoiceSettings.getEmail(context);
+        if (!email.isEmpty()) {
+            y += 14;
+            canvas.drawText("Email: " + email, MARGIN, y, paint);
+        }
+
+        // GSTIN (if available)
+        String gstin = InvoiceSettings.getGSTIN(context);
+        if (!gstin.isEmpty()) {
+            y += 14;
+            canvas.drawText("GSTIN: " + gstin, MARGIN, y, paint);
+        }
 
         /* =========================
            INVOICE HEADER (RIGHT)
@@ -113,12 +142,14 @@ public class PdfUtils {
         paint.setFakeBoldText(false);
         y += 18;
 
+        double subtotalAmount = 0;
         for (BillItem item : bill.items) {
             canvas.drawText(item.name, MARGIN, y, paint);
             canvas.drawText(item.name, 120, y, paint);
             canvas.drawText(String.valueOf(item.quantity), 330, y, paint);
             canvas.drawText("₹" + format(item.price), 380, y, paint);
             canvas.drawText("₹" + format(item.subtotal), 480, y, paint);
+            subtotalAmount += item.subtotal;
             y += 18;
         }
 
@@ -126,22 +157,42 @@ public class PdfUtils {
         drawTableLine(canvas, y);
 
         /* =========================
-           TOTAL SUMMARY (RIGHT)
+           TOTAL SUMMARY (RIGHT) WITH GST
            ========================= */
         y += 30;
 
+        // Get GST rates
+        float cgstRate = InvoiceSettings.getCGSTRate(context);
+        float sgstRate = InvoiceSettings.getSGSTRate(context);
+
+        // Calculate GST amounts
+        double cgstAmount = (subtotalAmount * cgstRate) / 100;
+        double sgstAmount = (subtotalAmount * sgstRate) / 100;
+        double totalWithGst = subtotalAmount + cgstAmount + sgstAmount;
+
         paint.setTextSize(11);
+        paint.setFakeBoldText(false);
+
+        // Subtotal
         canvas.drawText("SUBTOTAL:", 360, y, paint);
-        canvas.drawText("₹" + format(bill.total), 480, y, paint);
+        canvas.drawText("₹" + format(subtotalAmount), 480, y, paint);
 
+        // CGST
         y += 18;
-        canvas.drawText("TAX:", 360, y, paint);
-        canvas.drawText("₹0.00", 480, y, paint);
+        canvas.drawText("CGST (" + format(cgstRate) + "%):", 360, y, paint);
+        canvas.drawText("₹" + format(cgstAmount), 480, y, paint);
 
+        // SGST
+        y += 18;
+        canvas.drawText("SGST (" + format(sgstRate) + "%):", 360, y, paint);
+        canvas.drawText("₹" + format(sgstAmount), 480, y, paint);
+
+        // Total
         y += 18;
         paint.setFakeBoldText(true);
+        paint.setTextSize(12);
         canvas.drawText("TOTAL:", 360, y, paint);
-        canvas.drawText("₹" + format(bill.total), 480, y, paint);
+        canvas.drawText("₹" + format(totalWithGst), 480, y, paint);
 
         /* =========================
            FOOTER
@@ -202,6 +253,10 @@ public class PdfUtils {
     }
 
     private static String format(double value) {
+        return String.format(Locale.getDefault(), "%.2f", value);
+    }
+
+    private static String format(float value) {
         return String.format(Locale.getDefault(), "%.2f", value);
     }
 }

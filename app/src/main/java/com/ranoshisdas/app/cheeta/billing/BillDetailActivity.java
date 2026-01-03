@@ -1,5 +1,6 @@
 package com.ranoshisdas.app.cheeta.billing;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -7,13 +8,16 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.ranoshisdas.app.cheeta.R;
 import com.ranoshisdas.app.cheeta.models.Bill;
+import com.ranoshisdas.app.cheeta.settings.InvoiceSettingsActivity;
 import com.ranoshisdas.app.cheeta.utils.ImageUtils;
+import com.ranoshisdas.app.cheeta.utils.InvoiceSettings;
 import com.ranoshisdas.app.cheeta.utils.PdfUtils;
 import com.ranoshisdas.app.cheeta.utils.ShareUtils;
 
@@ -38,7 +42,6 @@ public class BillDetailActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_bill_detail);
 
-        // Get bill from intent
         bill = (Bill) getIntent().getSerializableExtra("bill");
         if (bill == null) {
             Toast.makeText(this, "Error loading bill", Toast.LENGTH_SHORT).show();
@@ -114,6 +117,19 @@ public class BillDetailActivity extends AppCompatActivity {
     }
 
     private void shareAsPdf() {
+        // NEW: Check if settings are configured
+        if (!InvoiceSettings.hasMinimumSettings(this)) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Settings Required")
+                    .setMessage("Please configure your invoice settings before generating PDF.")
+                    .setPositiveButton("Configure", (dialog, which) -> {
+                        startActivity(new Intent(this, InvoiceSettingsActivity.class));
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
+            return;
+        }
+
         progressBar.setVisibility(View.VISIBLE);
         sharePdfButton.setEnabled(false);
 
