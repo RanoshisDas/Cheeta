@@ -1,9 +1,7 @@
 package com.ranoshisdas.app.cheeta.utils;
 
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.pdf.PdfDocument;
 import android.os.Environment;
@@ -20,108 +18,164 @@ import java.util.Locale;
 
 public class PdfUtils {
 
+    private static final int PAGE_WIDTH = 595;
+    private static final int PAGE_HEIGHT = 842;
+    private static final int MARGIN = 40;
+
     public static File generateBillPdf(Context context, Bill bill) throws IOException {
-        // Create PDF document
+
         PdfDocument document = new PdfDocument();
-        PdfDocument.PageInfo pageInfo = new PdfDocument.PageInfo.Builder(595, 842, 1).create();
+        PdfDocument.PageInfo pageInfo =
+                new PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, 1).create();
         PdfDocument.Page page = document.startPage(pageInfo);
 
         Canvas canvas = page.getCanvas();
-        Paint paint = new Paint();
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
         int y = 50;
-        int lineHeight = 25;
-        int margin = 40;
 
-        // Title
-        paint.setTextSize(24);
-        paint.setFakeBoldText(true);
-        canvas.drawText("BILL / INVOICE", margin, y, paint);
-        y += lineHeight * 2;
-
-        // Bill ID
-        paint.setTextSize(14);
-        paint.setFakeBoldText(false);
-        canvas.drawText("Bill ID: " + bill.billId, margin, y, paint);
-        y += lineHeight;
-
-        // Date
-        SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault());
-        canvas.drawText("Date: " + sdf.format(new Date(bill.timestamp)), margin, y, paint);
-        y += lineHeight * 2;
-
-        // Customer details
+        /* =========================
+           COMPANY HEADER (LEFT)
+           ========================= */
         paint.setTextSize(16);
         paint.setFakeBoldText(true);
-        canvas.drawText("Customer Details:", margin, y, paint);
-        y += lineHeight;
+        canvas.drawText("New Priti Press", MARGIN, y, paint);
 
-        paint.setTextSize(14);
+        paint.setTextSize(11);
         paint.setFakeBoldText(false);
-        canvas.drawText("Name: " + bill.customer.name, margin, y, paint);
-        y += lineHeight;
-        canvas.drawText("Phone: " + bill.customer.phone, margin, y, paint);
-        y += lineHeight;
+        y += 18;
+        canvas.drawText("Prop: Pronay Kumar Sikder", MARGIN, y, paint);
+        y += 14;
+        canvas.drawText("GSTIN: 19CNHPS3979J1Z1", MARGIN, y, paint);
 
-        if (bill.customer.email != null && !bill.customer.email.isEmpty()) {
-            canvas.drawText("Email: " + bill.customer.email, margin, y, paint);
-            y += lineHeight;
-        }
-        y += lineHeight;
-
-        // Items header
-        paint.setTextSize(16);
+        /* =========================
+           INVOICE HEADER (RIGHT)
+           ========================= */
+        paint.setTextSize(26);
         paint.setFakeBoldText(true);
-        canvas.drawText("Items:", margin, y, paint);
-        y += lineHeight;
+        canvas.drawText("INVOICE", PAGE_WIDTH - 180, 50, paint);
 
-        // Draw line
-        paint.setStrokeWidth(2);
-        canvas.drawLine(margin, y, 555, y, paint);
-        y += 10;
+        paint.setTextSize(11);
+        paint.setFakeBoldText(false);
 
-        // Table headers
-        paint.setTextSize(12);
-        canvas.drawText("Item", margin, y, paint);
-        canvas.drawText("Qty", 280, y, paint);
-        canvas.drawText("Price", 340, y, paint);
-        canvas.drawText("Subtotal", 450, y, paint);
-        y += 5;
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
 
-        paint.setStrokeWidth(1);
-        canvas.drawLine(margin, y, 555, y, paint);
+        canvas.drawText("Date:", PAGE_WIDTH - 180, 90, paint);
+        canvas.drawText(sdf.format(new Date(bill.timestamp)), PAGE_WIDTH - 100, 90, paint);
+
+        canvas.drawText("Invoice #:", PAGE_WIDTH - 180, 110, paint);
+        canvas.drawText(bill.billId, PAGE_WIDTH - 100, 110, paint);
+
+        canvas.drawText("Customer ID:", PAGE_WIDTH - 180, 130, paint);
+        canvas.drawText(bill.customer.phone, PAGE_WIDTH - 100, 130, paint);
+
+        /* =========================
+           BILL TO / SHIP TO
+           ========================= */
+        y = 170;
+
+        drawSectionHeader(canvas, paint, MARGIN, y, "BILL TO:");
+        drawSectionHeader(canvas, paint, PAGE_WIDTH / 2 + 10, y, "SHIP TO:");
+
+        paint.setTextSize(11);
+        paint.setFakeBoldText(false);
+
+        y += 20;
+        canvas.drawText(bill.customer.name, MARGIN, y, paint);
+        canvas.drawText(bill.customer.name, PAGE_WIDTH / 2 + 10, y, paint);
+
+        y += 14;
+        canvas.drawText(bill.customer.phone, MARGIN, y, paint);
+        canvas.drawText(bill.customer.phone, PAGE_WIDTH / 2 + 10, y, paint);
+
+        /* =========================
+           ITEMS TABLE HEADER
+           ========================= */
+        y += 40;
+        drawTableLine(canvas, y);
         y += 15;
 
-        // Items
+        paint.setTextSize(11);
+        paint.setFakeBoldText(true);
+
+        canvas.drawText("ITEM", MARGIN, y, paint);
+        canvas.drawText("DESCRIPTION", 120, y, paint);
+        canvas.drawText("QTY", 330, y, paint);
+        canvas.drawText("UNIT PRICE", 380, y, paint);
+        canvas.drawText("TOTAL", 480, y, paint);
+
+        y += 8;
+        drawTableLine(canvas, y);
+
+        /* =========================
+           ITEMS ROWS
+           ========================= */
         paint.setFakeBoldText(false);
+        y += 18;
+
         for (BillItem item : bill.items) {
-            canvas.drawText(item.name, margin, y, paint);
-            canvas.drawText(String.valueOf(item.quantity), 280, y, paint);
-            canvas.drawText("₹" + String.format("%.2f", item.price), 340, y, paint);
-            canvas.drawText("₹" + String.format("%.2f", item.subtotal), 450, y, paint);
-            y += lineHeight;
+            canvas.drawText(item.name, MARGIN, y, paint);
+            canvas.drawText(item.name, 120, y, paint);
+            canvas.drawText(String.valueOf(item.quantity), 330, y, paint);
+            canvas.drawText("₹" + format(item.price), 380, y, paint);
+            canvas.drawText("₹" + format(item.subtotal), 480, y, paint);
+            y += 18;
         }
 
-        y += 10;
-        paint.setStrokeWidth(2);
-        canvas.drawLine(margin, y, 555, y, paint);
-        y += lineHeight;
+        y += 5;
+        drawTableLine(canvas, y);
 
-        // Total
-        paint.setTextSize(18);
+        /* =========================
+           TOTAL SUMMARY (RIGHT)
+           ========================= */
+        y += 30;
+
+        paint.setTextSize(11);
+        canvas.drawText("SUBTOTAL:", 360, y, paint);
+        canvas.drawText("₹" + format(bill.total), 480, y, paint);
+
+        y += 18;
+        canvas.drawText("TAX:", 360, y, paint);
+        canvas.drawText("₹0.00", 480, y, paint);
+
+        y += 18;
         paint.setFakeBoldText(true);
-        canvas.drawText("Total: ₹" + String.format("%.2f", bill.total), 350, y, paint);
+        canvas.drawText("TOTAL:", 360, y, paint);
+        canvas.drawText("₹" + format(bill.total), 480, y, paint);
+
+        /* =========================
+           FOOTER
+           ========================= */
+        y += 50;
+        paint.setTextSize(10);
+        paint.setFakeBoldText(false);
+        canvas.drawText(
+                "* This is a system generated invoice. Signature not required.",
+                MARGIN,
+                y,
+                paint
+        );
+
+        y += 20;
+        paint.setFakeBoldText(true);
+        canvas.drawText("Thank You For Your Business!", PAGE_WIDTH / 2 - 80, y, paint);
 
         document.finishPage(page);
 
-        // Save PDF to file
-        File dir = new File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "Cheeta/Bills");
-        if (!dir.exists()) {
-            dir.mkdirs();
-        }
+        /* =========================
+           SAVE FILE
+           ========================= */
+        File dir = new File(
+                context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS),
+                "Cheeta/Bills"
+        );
 
-        String fileName = "Bill_" + bill.billId + "_" + System.currentTimeMillis() + ".pdf";
-        File file = new File(dir, fileName);
+        if (!dir.exists()) dir.mkdirs();
+
+        File file = new File(
+                dir,
+                "Invoice_" + bill.billId + ".pdf"
+        );
 
         FileOutputStream fos = new FileOutputStream(file);
         document.writeTo(fos);
@@ -129,5 +183,25 @@ public class PdfUtils {
         fos.close();
 
         return file;
+    }
+
+    /* =========================
+       HELPERS
+       ========================= */
+
+    private static void drawSectionHeader(Canvas canvas, Paint paint, int x, int y, String title) {
+        paint.setTextSize(12);
+        paint.setFakeBoldText(true);
+        canvas.drawText(title, x, y, paint);
+    }
+
+    private static void drawTableLine(Canvas canvas, int y) {
+        Paint linePaint = new Paint();
+        linePaint.setStrokeWidth(1);
+        canvas.drawLine(MARGIN, y, PAGE_WIDTH - MARGIN, y, linePaint);
+    }
+
+    private static String format(double value) {
+        return String.format(Locale.getDefault(), "%.2f", value);
     }
 }
