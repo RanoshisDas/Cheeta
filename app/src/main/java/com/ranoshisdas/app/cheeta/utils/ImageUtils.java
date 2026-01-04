@@ -72,6 +72,9 @@ public class ImageUtils {
             y += lineHeight - 10;
         }
 
+        /* =========================
+            INVOICE HEADER - REPLACE THIS SECTION
+            ========================= */
         y += 20;
 
         // Invoice Header
@@ -80,10 +83,13 @@ public class ImageUtils {
         canvas.drawText("INVOICE", margin, y, paint);
         y += lineHeight;
 
-        // Bill ID
+        // Bill Number (UPDATED - use billNumber instead of billId)
         paint.setTextSize(22);
         paint.setFakeBoldText(false);
-        canvas.drawText("Bill ID: " + bill.billId, margin, y, paint);
+        String invoiceNumber = (bill.billNumber != null && !bill.billNumber.isEmpty())
+                ? bill.billNumber
+                : bill.billId.substring(0, 8);
+        canvas.drawText("Bill #" + invoiceNumber, margin, y, paint);
         y += lineHeight - 5;
 
         // Date
@@ -205,7 +211,11 @@ public class ImageUtils {
             dir.mkdirs();
         }
 
-        String fileName = "Bill_" + bill.billId + "_" + System.currentTimeMillis() + ".png";
+// Use bill number in filename (UPDATED)
+        String fileName = (bill.billNumber != null && !bill.billNumber.isEmpty())
+                ? "Bill_" + bill.billNumber + ".png"
+                : "Bill_" + bill.billId + "_" + System.currentTimeMillis() + ".png";
+
         File file = new File(dir, fileName);
 
         FileOutputStream fos = new FileOutputStream(file);

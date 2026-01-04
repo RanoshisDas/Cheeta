@@ -26,7 +26,14 @@ import com.ranoshisdas.app.cheeta.models.Item;
 import com.ranoshisdas.app.cheeta.settings.InvoiceSettingsActivity;
 import com.ranoshisdas.app.cheeta.utils.FirebaseUtil;
 import com.ranoshisdas.app.cheeta.utils.InvoiceSettings;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.Transaction;
+import com.ranoshisdas.app.cheeta.utils.BillNumberGenerator;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -211,6 +218,8 @@ public class CreateBillActivity extends AppCompatActivity {
         totalText.setText("Total: ₹" + String.format("%.2f", total));
     }
 
+    // REPLACE the saveBill() method in CreateBillActivity.java with this implementation
+
     private void saveBill() {
         String name = customerNameInput.getText().toString().trim();
         String phone = customerPhoneInput.getText().toString().trim();
@@ -230,59 +239,92 @@ public class CreateBillActivity extends AppCompatActivity {
         saveBillButton.setEnabled(false);
 
         String userId = FirebaseUtil.auth().getCurrentUser().getUid();
+        String billMonth = BillNumberGenerator.getCurrentBillMonth();
 
-        // Create customer object
-        Customer customer = new Customer();
-        customer.name = name;
-        customer.phone = phone;
-        customer.email = email;
-
-        // Get current GST rates
-        float cgstRate = InvoiceSettings.getCGSTRate(this);
-        float sgstRate = InvoiceSettings.getSGSTRate(this);
-
-        // Create business details object (snapshot of current settings)
-        Map<String, Object> businessDetails = new HashMap<>();
-        businessDetails.put("name", InvoiceSettings.getBusinessName(this));
-        businessDetails.put("address", InvoiceSettings.getAddress(this));
-        businessDetails.put("phone", InvoiceSettings.getPhone(this));
-        businessDetails.put("email", InvoiceSettings.getEmail(this));
-        businessDetails.put("gstin", InvoiceSettings.getGSTIN(this));
-
-        // Create bill data with ALL details including GST
-        Map<String, Object> billData = new HashMap<>();
-        billData.put("customer", customer);
-        billData.put("items", selectedItems);
-
-        // Amount breakdown
-        billData.put("subtotal", subtotal);
-        billData.put("cgst", cgstAmount);
-        billData.put("sgst", sgstAmount);
-        billData.put("total", total);
-
-        // GST rates used (for historical accuracy)
-        billData.put("cgstRate", cgstRate);
-        billData.put("sgstRate", sgstRate);
-
-        // Business details at time of creation
-        billData.put("businessDetails", businessDetails);
-
-        billData.put("timestamp", System.currentTimeMillis());
-
-        // Save to Firestore
-        FirebaseUtil.db().collection("users")
+        // Counter document reference
+        DocumentReference counterRef = FirebaseUtil.db()
+                .collection("users")
                 .document(userId)
-                .collection("bills")
-                .add(billData)
-                .addOnSuccessListener(documentReference -> {
-                    Toast.makeText(this, "Bill saved successfully", Toast.LENGTH_SHORT).show();
+                .collection("meta")
+                .document("bill_counters")
+                .collection("counters")
+                .document(billMonth);
+
+        // Run transaction to get next sequence and save bill
+        FirebaseUtil.db().runTransaction((Transaction transaction) -> {
+                    // Read counter
+                    DocumentSnapshot counterSnapshot = transaction.get(counterRef);
+
+                    int nextSequence = 1;
+                    if (counterSnapshot.exists() && counterSnapshot.contains("lastSequence")) {
+                        Long lastSeq = counterSnapshot.getLong("lastSequence");
+                        nextSequence = (lastSeq != null ? lastSeq.intValue() : 0) + 1;
+                    }
+
+                    // Update counter
+                    Map<String, Object> counterData = new HashMap<>();
+                    counterData.put("lastSequence", nextSequence);
+                    counterData.put("lastUpdated", System.currentTimeMillis());
+                    transaction.set(counterRef, counterData);
+
+                    // Generate bill number
+                    String billNumber = BillNumberGenerator.formatBillNumber(billMonth, nextSequence);
+
+                    // Create customer object
+                    Map<String, Object> customerData = new HashMap<>();
+                    customerData.put("name", name);
+                    customerData.put("phone", phone);
+                    customerData.put("email", email);
+
+                    // Get GST rates
+                    float cgstRate = InvoiceSettings.getCGSTRate(CreateBillActivity.this);
+                    float sgstRate = InvoiceSettings.getSGSTRate(CreateBillActivity.this);
+
+                    // Business details snapshot
+                    Map<String, Object> businessDetails = new HashMap<>();
+                    businessDetails.put("name", InvoiceSettings.getBusinessName(CreateBillActivity.this));
+                    businessDetails.put("address", InvoiceSettings.getAddress(CreateBillActivity.this));
+                    businessDetails.put("phone", InvoiceSettings.getPhone(CreateBillActivity.this));
+                    businessDetails.put("email", InvoiceSettings.getEmail(CreateBillActivity.this));
+                    businessDetails.put("gstin", InvoiceSettings.getGSTIN(CreateBillActivity.this));
+
+                    // Create bill data
+                    Map<String, Object> billData = new HashMap<>();
+                    billData.put("billNumber", billNumber);
+                    billData.put("billSequence", nextSequence);
+                    billData.put("billMonth", billMonth);
+                    billData.put("customer", customerData);
+                    billData.put("items", selectedItems);
+                    billData.put("subtotal", subtotal);
+                    billData.put("cgst", cgstAmount);
+                    billData.put("sgst", sgstAmount);
+                    billData.put("total", total);
+                    billData.put("cgstRate", cgstRate);
+                    billData.put("sgstRate", sgstRate);
+                    billData.put("businessDetails", businessDetails);
+                    billData.put("timestamp", System.currentTimeMillis());
+
+                    // Save bill with auto-generated ID
+                    DocumentReference billRef = FirebaseUtil.db()
+                            .collection("users")
+                            .document(userId)
+                            .collection("bills")
+                            .document(); // Auto-generated ID
+
+                    transaction.set(billRef, billData);
+
+                    return billNumber; // Return bill number for success handler
+                })
+                .addOnSuccessListener(billNumber -> {
+                    progressBar.setVisibility(View.GONE);
+                    saveBillButton.setEnabled(true);
+                    Toast.makeText(this, "Bill " + billNumber + " saved successfully!", Toast.LENGTH_SHORT).show();
                     finish();
                 })
                 .addOnFailureListener(e -> {
                     progressBar.setVisibility(View.GONE);
                     saveBillButton.setEnabled(true);
-                    Toast.makeText(this, "Failed to save bill: " + e.getMessage(),
-                            Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Failed to save bill: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 });
     }
 }

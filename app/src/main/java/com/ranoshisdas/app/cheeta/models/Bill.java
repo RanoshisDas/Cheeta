@@ -4,6 +4,12 @@ import java.io.Serializable;
 import java.util.List;
 
 public class Bill implements Serializable {
+    // NEW FIELDS for sequential numbering
+    public String billNumber;    // "JAN-26-001"
+    public int billSequence;     // 1
+    public String billMonth;     // "2026-01"
+
+    // EXISTING FIELDS
     public String billId;
     public Customer customer;
     public List<BillItem> items;

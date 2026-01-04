@@ -88,8 +88,12 @@ public class PdfUtils {
         canvas.drawText("Date:", PAGE_WIDTH - 180, 90, paint);
         canvas.drawText(sdf.format(new Date(bill.timestamp)), PAGE_WIDTH - 100, 90, paint);
 
+// Use Bill Number instead of billId (UPDATED)
         canvas.drawText("Invoice #:", PAGE_WIDTH - 180, 110, paint);
-        canvas.drawText(bill.billId, PAGE_WIDTH - 100, 110, paint);
+        String invoiceNumber = (bill.billNumber != null && !bill.billNumber.isEmpty())
+                ? bill.billNumber
+                : bill.billId.substring(0, 8);
+        canvas.drawText(invoiceNumber, PAGE_WIDTH - 100, 110, paint);
 
         canvas.drawText("Customer ID:", PAGE_WIDTH - 180, 130, paint);
         canvas.drawText(bill.customer.phone, PAGE_WIDTH - 100, 130, paint);
@@ -208,10 +212,12 @@ public class PdfUtils {
 
         if (!dir.exists()) dir.mkdirs();
 
-        File file = new File(
-                dir,
-                "Invoice_" + bill.billId + ".pdf"
-        );
+// Use bill number in filename (UPDATED)
+        String fileName = (bill.billNumber != null && !bill.billNumber.isEmpty())
+                ? "Invoice_" + bill.billNumber + ".pdf"
+                : "Invoice_" + bill.billId + ".pdf";
+
+        File file = new File(dir, fileName);
 
         FileOutputStream fos = new FileOutputStream(file);
         document.writeTo(fos);

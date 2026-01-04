@@ -80,7 +80,13 @@ public class BillDetailActivity extends AppCompatActivity {
         customerEmailText.setText("Email: " + (bill.customer.email != null && !bill.customer.email.isEmpty()
                 ? bill.customer.email : "N/A"));
 
-        billIdText.setText("Bill ID: " + bill.billId);
+        // Display Bill Number prominently (NEW)
+        if (bill.billNumber != null && !bill.billNumber.isEmpty()) {
+            billIdText.setText("Bill Number: " + bill.billNumber);
+        } else {
+            // Fallback for legacy bills
+            billIdText.setText("Bill ID: " + bill.billId);
+        }
 
         SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault());
         billDateText.setText("Date: " + sdf.format(new Date(bill.timestamp)));

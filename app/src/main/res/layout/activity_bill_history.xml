@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -13,6 +14,76 @@
         android:textStyle="bold"
         android:padding="16dp" />
 
+    <!-- Search & Filter Section -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="8dp"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="2dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <!-- Search Bar -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <EditText
+                    android:id="@+id/searchInput"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:hint="Search by bill #, name, or phone"
+                    android:drawableStart="@android:drawable/ic_menu_search"
+                    android:drawablePadding="8dp"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:background="@android:drawable/editbox_background"
+                    android:textSize="14sp" />
+
+                <ImageButton
+                    android:id="@+id/filterButton"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@android:drawable/ic_menu_my_calendar"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Filter by date"
+                    android:layout_marginStart="8dp" />
+
+                <ImageButton
+                    android:id="@+id/clearFilterButton"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@android:drawable/ic_menu_close_clear_cancel"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Clear filters"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- Date Range Display -->
+            <TextView
+                android:id="@+id/dateRangeText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="All Bills"
+                android:textSize="12sp"
+                android:textColor="?android:attr/textColorSecondary"
+                android:layout_marginTop="8dp"
+                android:drawableStart="@android:drawable/ic_menu_today"
+                android:drawablePadding="4dp" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Bills List -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView"
         android:layout_width="match_parent"
@@ -20,6 +91,7 @@
         android:layout_weight="1"
         android:padding="8dp" />
 
+    <!-- Loading Indicator -->
     <ProgressBar
         android:id="@+id/progressBar"
         android:layout_width="wrap_content"

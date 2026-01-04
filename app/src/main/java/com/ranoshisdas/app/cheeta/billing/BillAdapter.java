@@ -41,6 +41,17 @@ public class BillAdapter extends RecyclerView.Adapter<BillAdapter.ViewHolder> {
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Bill bill = bills.get(position);
+
+        // Display bill number prominently
+        if (bill.billNumber != null && !bill.billNumber.isEmpty()) {
+            holder.billNumberText.setText("Bill #" + bill.billNumber);
+            holder.billNumberText.setVisibility(View.VISIBLE);
+        } else {
+            // Fallback for legacy bills without bill number
+            holder.billNumberText.setText("Bill #" + bill.billId.substring(0, 8));
+            holder.billNumberText.setVisibility(View.VISIBLE);
+        }
+
         holder.customerText.setText("Customer: " + bill.customer.name);
         holder.phoneText.setText("Phone: " + bill.customer.phone);
         holder.totalText.setText("Total: ₹" + String.format("%.2f", bill.total));
@@ -65,10 +76,11 @@ public class BillAdapter extends RecyclerView.Adapter<BillAdapter.ViewHolder> {
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView customerText, phoneText, totalText, dateText, itemCountText;
+        TextView billNumberText, customerText, phoneText, totalText, dateText, itemCountText;
 
         ViewHolder(View itemView) {
             super(itemView);
+            billNumberText = itemView.findViewById(R.id.billNumberText);
             customerText = itemView.findViewById(R.id.customerText);
             phoneText = itemView.findViewById(R.id.phoneText);
             totalText = itemView.findViewById(R.id.totalText);
